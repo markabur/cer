@@ -65,21 +65,21 @@ function corresponding_entity_references_format_label($key) {
  * Implements hook_entity_insert().
  */
 function corresponding_entity_references_entity_insert($entity, $type) {
-  corresponding_entity_references_processing_entity('insert', $entity);
+  corresponding_entity_references_processing_entity('insert', $entity, $type);
 }
 
 /**
  * Implements hook_entity_update().
  */
 function corresponding_entity_references_entity_update($entity, $type) {
-  corresponding_entity_references_processing_entity('update', $entity);
+  corresponding_entity_references_processing_entity('update', $entity, $type);
 }
 
 /**
  * Implements hook_entity_delete().
  */
 function corresponding_entity_references_entity_delete($entity, $type) {
-  corresponding_entity_references_processing_entity('delete', $entity);
+  corresponding_entity_references_processing_entity('delete', $entity, $type);
 }
 
 /**
@@ -114,49 +114,55 @@ function corresponding_entity_references_preset_enabled($key) {
  * @param $process_unchanged whether or not to process entity reference fields
  *        whose values have not changed.
  */
-function corresponding_entity_references_processing_entity($op, $entity, $process_unchanged = FALSE) { 
+function corresponding_entity_references_processing_entity($op, $entity, $type, $process_unchanged = FALSE) { 
   module_load_include('inc', 'corresponding_entity_references', 'corresponding_entity_references.crud');
 
   $result = corresponding_entity_references_preset_load_enabled();
 
   while ($row = array_shift($result)) {
     $key = explode('*', $row->entity_types_content_fields);
+    if(($type == $key[0]) || ($type == $key[3])){
+	
+      $entity->home = _corresponding_entity_references_entity_get_bundle($entity, $type);
 
-    switch ($entity->type) {
-      case $key[1]:
-        // Create an array to pass to op function instead of 6 arguments.
-        $keys = array(
-	  'home_entity_type' => $key[0],
-	  'home_bundle' => $key[1], 
-	  'home_field' => $key[2],
-	  'away_entity_type' => $key[3],
-	  'away_bundle' => $key[4],
-	  'away_field' => $key[5],
-	);
-        $args = array($entity, $keys, $process_unchanged);
-        $function = 'corresponding_entity_references_' . $op;
-        call_user_func_array($function, $args);
-        if ($key[0] != $key[2]) {
+      switch ($entity->home) {
+        case $key[1]:
+          // Create an array to pass to op function instead of 6 arguments.
+          $keys = array(
+            'home_entity_type' => $key[0],
+            'home_bundle' => $key[1], 
+            'home_field' => $key[2],
+            'away_entity_type' => $key[3],
+            'away_bundle' => $key[4],
+            'away_field' => $key[5],
+          );
+          $args = array($entity, $keys, $process_unchanged);
+          $function = 'corresponding_entity_references_' . $op;
+          call_user_func_array($function, $args);
+          if ($key[0] != $key[2]) {
+            break;
+          }
+
+        // Fall through.
+        case $key[4]:
+          $keys = array(
+            'home_entity_type' => $key[3],
+            'home_bundle' => $key[4], 
+            'home_field' => $key[5],
+            'away_entity_type' => $key[0],
+            'away_bundle' => $key[1],
+            'away_field' => $key[2],
+          );
+          $args = array($entity, $keys, $process_unchanged);
+          $function = 'corresponding_entity_references_' . $op;
+          call_user_func_array($function, $args);
           break;
-        }
-
-      // Fall through.
-      case $key[4]:
-        $keys = array(
-	  'home_entity_type' => $key[3],
-	  'home_bundle' => $key[4], 
-	  'home_field' => $key[5],
-	  'away_entity_type' => $key[0],
-	  'away_bundle' => $key[1],
-	  'away_field' => $key[2],
-	);
-        $args = array($entity, $keys, $process_unchanged);
-        $function = 'corresponding_entity_references_' . $op;
-        call_user_func_array($function, $args);
-        break;
+      }
     }
   }
 }
+
+
 
 /**
  * Submit a batch job to index the remaining, unindexed content.

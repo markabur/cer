@@ -13,7 +13,9 @@ function corresponding_entity_references_settings_form() {
   $result = db_query("SELECT field_name, data FROM {field_config} WHERE type = :type AND deleted = 0", array(':type' => 'entityreference'));
   foreach ($result as $row) {
     $data = unserialize($row->data);
-
+    if(empty($data['settings']['handler_settings']['target_bundles'])){
+      	$references[$row->field_name][] = $data['settings']['target_type'];
+    }
     foreach ($data['settings']['handler_settings']['target_bundles'] as $reference) {
       if ($reference != '0') {
         $references[$row->field_name][] = $reference;
