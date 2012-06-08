@@ -34,9 +34,11 @@ function corresponding_entity_references_insert($home_entity, $keys) {
           // TODO: Do this with EntityFieldQuery
           // See http://api.drupal.org/api/drupal/modules--node--node.module/function/node_load_multiple/7
           if ($referenced_entity = entity_load($keys['away_entity_type'], array($reference['target_id']), NULL, FALSE)) {
-	    // Entity Load loads an array of ojects keyed by their ID.
-	    $referenced_entity = $referenced_entity[$reference['target_id']];
-            if ($referenced_entity->type == $keys['away_bundle']) {
+            // Entity Load loads an array of ojects keyed by their ID.
+            $referenced_entity = $referenced_entity[$reference['target_id']];
+            $referenced_entity->bundle_type = _corresponding_entity_references_entity_get_bundle($referenced_entity, $keys['away_entity_type']);
+            if ($referenced_entity->bundle_type == $keys['away_bundle']) {
+            
               // Add the new reference.
               // If there are no other references, we need to make sure this
               // is delta 0
@@ -269,6 +271,7 @@ function corresponding_entity_references_delete($home_entity, $keys, $process_un
           $referenced_entity->bundle_type = _corresponding_entity_references_entity_get_bundle($referenced_entity, $keys['away_entity_type']);
           if ($referenced_entity->bundle_type == $keys['away_bundle']) {
             // Iterate through the away entity's references.
+
             foreach ($referenced_entity->{$keys['away_field']}[$lang] as $key => $value) {
               // Remove references to the deleted node.
               if ($value['target_id'] && $value['target_id'] == $home_entity->$ids['home']) {
