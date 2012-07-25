@@ -33,8 +33,6 @@ function cer_schema() {
 }
 
 /**
- * Implements hook_update().
- * 
  * Rename table to shorten module name.
  */
 function cer_update_7001() {
