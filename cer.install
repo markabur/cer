@@ -36,5 +36,5 @@ function cer_schema() {
  * Rename table to shorten module name.
  */
 function cer_update_7001() {
-  db_rename_table('corresponding_entity_reference', 'cer');
+  db_rename_table('corresponding_entity_references', 'cer');
 }
