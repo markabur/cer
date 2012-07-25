@@ -32,7 +32,7 @@ Install
 - Create entity type B
 - Create a entity reference field on entity type A pointing to entity B
 - Create a entity reference field on entity type B pointing to entity A
-- Go to the settings page at admin/config/system/corresponding_entity_references. 
+- Go to the settings page at admin/config/system/cer. 
   Select to enable the corresponding referencing for these node types pointing 
   to each other.
 - Create some entities and reference them to each other

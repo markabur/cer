@@ -17,13 +17,13 @@
  *  'away_field' => $key[5],
  * );
  */
-function corresponding_entity_references_insert($home_entity, $keys) {
+function cer_insert($home_entity, $keys) {
   $types = array(
     'home' => $keys['home_entity_type'],
     'away' => $keys['away_entity_type'],
   );
 
-  $ids = _corresponding_entity_references_entity_ids($types);
+  $ids = _cer_entity_ids($types);
 
   // Determine the nodereference values after the insert.
   if (isset($home_entity->$keys['home_field']) && is_array($home_entity->$keys['home_field'])) {
@@ -36,7 +36,7 @@ function corresponding_entity_references_insert($home_entity, $keys) {
           if ($referenced_entity = entity_load($keys['away_entity_type'], array($reference['target_id']), NULL, FALSE)) {
             // Entity Load loads an array of ojects keyed by their ID.
             $referenced_entity = $referenced_entity[$reference['target_id']];
-            $referenced_entity->bundle_type = _corresponding_entity_references_entity_get_bundle($referenced_entity, $keys['away_entity_type']);
+            $referenced_entity->bundle_type = _cer_entity_get_bundle($referenced_entity, $keys['away_entity_type']);
             if ($referenced_entity->bundle_type == $keys['away_bundle']) {
             
               // Add the new reference.
@@ -62,7 +62,7 @@ function corresponding_entity_references_insert($home_entity, $keys) {
                   $referenced_entity->{$keys['away_field']}[LANGUAGE_NONE][] = array('target_id' => $home_entity->$ids['home']);
                 }
               }
-              _corresponding_entity_references_update($keys['away_entity_type'], $referenced_entity);
+              _cer_update($keys['away_entity_type'], $referenced_entity);
             }
           }
         }
@@ -87,13 +87,13 @@ function corresponding_entity_references_insert($home_entity, $keys) {
  *  'away_field' => $key[5],
  * );
  */
-function corresponding_entity_references_update($home_entity, $keys, $process_unchanged = FALSE) {
+function cer_update($home_entity, $keys, $process_unchanged = FALSE) {
   $types = array(
     'home' => $keys['home_entity_type'],
     'away' => $keys['away_entity_type'],
   );
 
-  $ids = _corresponding_entity_references_entity_ids($types);
+  $ids = _cer_entity_ids($types);
 
   // Since home_entity is just being saved, $old_entity and $home_entity are different!
   $old_entity = $home_entity->original;
@@ -137,7 +137,7 @@ function corresponding_entity_references_update($home_entity, $keys, $process_un
           if ($referenced_entity = entity_load($keys['away_entity_type'], array($id), NULL, FALSE)) {
 	    $referenced_entity = $referenced_entity[$id];
             // Self-references are handled by the node_reference module anyway.
-            $referenced_entity->bundle_type = _corresponding_entity_references_entity_get_bundle($referenced_entity, $keys['away_entity_type']);
+            $referenced_entity->bundle_type = _cer_entity_get_bundle($referenced_entity, $keys['away_entity_type']);
             if ($referenced_entity->bundle_type == $keys['away_bundle'] && $id != $home_entity->$ids['home']) {
               if (isset($referenced_entity->{$keys['away_field']}[LANGUAGE_NONE]) && is_array($referenced_entity->{$keys['away_field']}[LANGUAGE_NONE])) {
                 // Iterate through the away node's references.
@@ -145,7 +145,7 @@ function corresponding_entity_references_update($home_entity, $keys, $process_un
                   // Remove references to the deleted node.
                   if ($value['target_id'] && $value['target_id'] == $home_entity->$ids['home']) {
                     unset($referenced_entity->{$keys['away_field']}[LANGUAGE_NONE][$key]);
-                    _corresponding_entity_references_update($keys['away_entity_type'], $referenced_entity);
+                    _cer_update($keys['away_entity_type'], $referenced_entity);
                     break;
                   }
                 }
@@ -165,7 +165,7 @@ function corresponding_entity_references_update($home_entity, $keys, $process_un
 	$referenced_entity = $referenced_entity[$id];
         // Self-references are handled by the node_reference module anyway.
 
-        $referenced_entity->bundle_type = _corresponding_entity_references_entity_get_bundle($referenced_entity, $keys['away_entity_type']);
+        $referenced_entity->bundle_type = _cer_entity_get_bundle($referenced_entity, $keys['away_entity_type']);
         if ($referenced_entity->bundle_type == $keys['away_bundle'] && $id != $home_entity->$ids['home']) {
           // Detect whether the reference already exists.
           $exists = FALSE;
@@ -208,7 +208,7 @@ function corresponding_entity_references_update($home_entity, $keys, $process_un
               $references = count($referenced_entity->{$keys['away_field']}[LANGUAGE_NONE]) + 1;
               if (($allowed_references >= $references) || $unlimited) {
                 $referenced_entity->{$keys['away_field']}[LANGUAGE_NONE][] = array('target_id' => $home_entity->$ids['home']);
-                _corresponding_entity_references_update($keys['away_entity_type'], $referenced_entity);
+                _cer_update($keys['away_entity_type'], $referenced_entity);
               }
               else {
                 $t_reference = format_plural($references, '1 reference', '@count references');
@@ -247,13 +247,13 @@ function corresponding_entity_references_update($home_entity, $keys, $process_un
  *  'away_field' => $key[5],
  * );
  */
-function corresponding_entity_references_delete($home_entity, $keys, $process_unchanged = FALSE) {
+function cer_delete($home_entity, $keys, $process_unchanged = FALSE) {
   $types = array(
     'home' => $keys['home_entity_type'],
     'away' => $keys['away_entity_type'],
   );
 
-  $ids = _corresponding_entity_references_entity_ids($types);
+  $ids = _cer_entity_ids($types);
 
   // Iterate through the field's references.
   foreach ($home_entity->$keys['home_field'] as $lang => $langdata) {
@@ -262,14 +262,14 @@ function corresponding_entity_references_delete($home_entity, $keys, $process_un
         // Load the referenced node if it is of the specified away type.
         if ($referenced_entity = entity_load($keys['away_entity_type'], array($reference['target_id']), NULL, FALSE)) {
           $referenced_entity = $referenced_entity[$reference['target_id']];
-          $referenced_entity->bundle_type = _corresponding_entity_references_entity_get_bundle($referenced_entity, $keys['away_entity_type']);
+          $referenced_entity->bundle_type = _cer_entity_get_bundle($referenced_entity, $keys['away_entity_type']);
           if ($referenced_entity->bundle_type == $keys['away_bundle']) {
             // Iterate through the away entity's references.
             foreach ($referenced_entity->{$keys['away_field']}[$lang] as $key => $value) {
               // Remove references to the deleted node.
               if ($value['target_id'] && $value['target_id'] == $home_entity->$ids['home']) {
                 unset($referenced_entity->{$keys['away_field']}[$lang][$key]);
-                _corresponding_entity_references_update($keys['away_entity_type'], $referenced_entity);
+                _cer_update($keys['away_entity_type'], $referenced_entity);
                 break;
               }
             }
@@ -285,7 +285,7 @@ function corresponding_entity_references_delete($home_entity, $keys, $process_un
  *
  * @param $node the referenced node to be updated.
  */
-function _corresponding_entity_references_update($entity_type, $entity) {
+function _cer_update($entity_type, $entity) {
   field_attach_presave($entity_type, $entity);
   field_attach_update($entity_type, $entity);
 }
@@ -295,7 +295,7 @@ function _corresponding_entity_references_update($entity_type, $entity) {
  *
  * @param $entity_types Array containing "home" and "away" keys.
  */
-function _corresponding_entity_references_entity_ids($entity_types) {
+function _cer_entity_ids($entity_types) {
   $types = entity_get_info();
   foreach($types as $key => $type){
     $entity_type_id[$key] = $type['entity keys']['id'];
@@ -315,7 +315,7 @@ function _corresponding_entity_references_entity_ids($entity_types) {
  *
  * @param $entity_types Array containing "home" and "away" keys.
  */
-function _corresponding_entity_references_entity_bundles($entity_types) {
+function _cer_entity_bundles($entity_types) {
   $types = entity_get_info();
 
   foreach($types as $key => $type){
@@ -329,7 +329,7 @@ function _corresponding_entity_references_entity_bundles($entity_types) {
   return $bundles;
 }
 
-function _corresponding_entity_references_entity_get_bundle($entity, $entity_type) {
+function _cer_entity_get_bundle($entity, $entity_type) {
   $info = entity_get_info($entity_type);
   if (empty($info['entity keys']['bundle'])) {
     return $entity_type;

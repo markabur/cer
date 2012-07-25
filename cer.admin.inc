@@ -7,7 +7,7 @@
 /**
  * The settings form.
  */
-function corresponding_entity_references_settings_form() {
+function cer_settings_form() {
   $form['intro'] = array('#markup' => t('Check which entity references should listen to each other. When checking a check box a reference on entity type A to entity B will automatically update the entity reference field on entity B adding an entry which points to entity A.'));
 
   $result = db_query("SELECT field_name, data FROM {field_config} WHERE type = :type AND deleted = 0", array(':type' => 'entityreference'));
@@ -53,7 +53,7 @@ function corresponding_entity_references_settings_form() {
       $count = 0;
 
       foreach ($corr_entityrefs as $key => $corr_entityref) {
-        $formatted_label = corresponding_entity_references_format_label($key);
+        $formatted_label = cer_format_label($key);
         $formatted_key = str_replace(' ', '*', $key);
 
         $mapping[] = $formatted_key;
@@ -62,7 +62,7 @@ function corresponding_entity_references_settings_form() {
         );
         $form['values'][$count]['enabled_' . $count] = array(
           '#type' => 'checkbox',
-          '#default_value' => corresponding_entity_references_preset_enabled($formatted_key),
+          '#default_value' => cer_preset_enabled($formatted_key),
           '#title' => $formatted_label,
         );
         $count++;
@@ -88,7 +88,7 @@ function corresponding_entity_references_settings_form() {
 /**
  * Submit function for settings form.
  */
-function corresponding_entity_references_settings_form_submit($form, $form_values) {
+function cer_settings_form_submit($form, $form_values) {
   ctools_include('export');
   $query_values = array();
 
@@ -102,18 +102,18 @@ function corresponding_entity_references_settings_form_submit($form, $form_value
   }
 
   // load all existing presets
-  $presets = ctools_export_crud_load_all('corresponding_entity_references');
+  $presets = ctools_export_crud_load_all('cer');
 
   foreach ($query_values as $key => $value) {
     // get preset object (create new one if it doesn't exist already).
-    $preset = empty($presets[$key]) ? ctools_export_crud_new('corresponding_entity_references') : $presets[$key];
+    $preset = empty($presets[$key]) ? ctools_export_crud_new('cer') : $presets[$key];
     // set and save value
 
     if (empty($preset->entity_types_content_fields)) {
       $preset->entity_types_content_fields = $key;
     }
     $preset->enabled = $value;
-    ctools_export_crud_save('corresponding_entity_references', $preset);
+    ctools_export_crud_save('cer', $preset);
     // remove from list of presets, so we know which ones are still used
     if (isset($presets[$key])) unset($presets[$key]);
   }
@@ -130,7 +130,7 @@ function corresponding_entity_references_settings_form_submit($form, $form_value
  * The update form.
  * Allows updating of current entitys.
  */
-function corresponding_entity_references_update_form() {
+function cer_update_form() {
   $form = array();
 
   $form['intro'] = array(
@@ -186,7 +186,7 @@ function corresponding_entity_references_update_form() {
  * The update form.
  * Allows updating of current entitys.
  */
-function corresponding_entity_references_update_form_validate($form, &$form_state) {
+function cer_update_form_validate($form, &$form_state) {
   $types = array_filter($form_state['values']['types']);
   if (empty($types)) {
     form_set_error('types', t('You must select at least one entity type.'));
@@ -197,8 +197,8 @@ function corresponding_entity_references_update_form_validate($form, &$form_stat
  * The update form.
  * Allows updating of current entitys.
  */
-function corresponding_entity_references_update_form_submit($form, &$form_state) {
+function cer_update_form_submit($form, &$form_state) {
   $types = array_filter($form_state['values']['types']);
   $types = array_keys($types);
-  corresponding_entity_references_batch_index_remaining($types, $form_state['values']['limit']);
+  cer_batch_index_remaining($types, $form_state['values']['limit']);
 }

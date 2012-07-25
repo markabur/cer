@@ -4,4 +4,5 @@ core = 7.x
 dependencies[] = entityreference
 dependencies[] = ctools
 
-
+files[] = cer.admin.inc
+files[] = cer.crud.inc

@@ -8,32 +8,32 @@
 /**
  * Implements hook_menu().
  */
-function corresponding_entity_references_menu() {
+function cer_menu() {
   $items = array();
-  $items['admin/config/system/corresponding_entity_references'] = array(
+  $items['admin/config/system/cer'] = array(
     'title' => 'Corresponding entity references',
     'page callback' => 'drupal_get_form',
-    'page arguments' => array('corresponding_entity_references_settings_form'),
-    'access arguments' => array('administer corresponding entity references settings'),
-    'file' => 'corresponding_entity_references.admin.inc',
+    'page arguments' => array('cer_settings_form'),
+    'access arguments' => array('administer cer settings'),
+    'file' => 'cer.admin.inc',
     'type' => MENU_NORMAL_ITEM,
   );
 
-  $items['admin/config/system/corresponding_entity_references/references'] = array(
+  $items['admin/config/system/cer/references'] = array(
     'title' => 'Corresponding entity references',
     'page callback' => 'drupal_get_form',
-    'page arguments' => array('corresponding_entity_references_settings_form'),
-    'access arguments' => array('administer corresponding entity references settings'),
-    'file' => 'corresponding_entity_references.admin.inc',
+    'page arguments' => array('cer_settings_form'),
+    'access arguments' => array('administer cer settings'),
+    'file' => 'cer.admin.inc',
     'type' => MENU_DEFAULT_LOCAL_TASK,
   );
 
-  $items['admin/config/system/corresponding_entity_references/update'] = array(
+  $items['admin/config/system/cer/update'] = array(
     'title' => 'Update existing entities',
     'page callback' => 'drupal_get_form',
-    'page arguments' => array('corresponding_entity_references_update_form'),
-    'access arguments' => array('administer corresponding entity references settings'),
-    'file' => 'corresponding_entity_references.admin.inc',
+    'page arguments' => array('cer_update_form'),
+    'access arguments' => array('administer cer settings'),
+    'file' => 'cer.admin.inc',
     'type' => MENU_LOCAL_TASK,
   );
 
@@ -43,9 +43,9 @@ function corresponding_entity_references_menu() {
 /**
  * Implements hook_permission().
  */
-function corresponding_entity_references_permission() {
+function cer_permission() {
   return array(
-    'administer corresponding entity references settings' => array(
+    'administer cer settings' => array(
       'title' => t('Administer corresponding entity reference settings'),
       'description' => t('Administer corresponding entity reference settings'),
     )
@@ -55,7 +55,7 @@ function corresponding_entity_references_permission() {
 /**
  * Formats a label.
  */
-function corresponding_entity_references_format_label($key) {
+function cer_format_label($key) {
   $key = explode(' ', $key);
   return t('Field instance:"!field1" on Entity type:"!entity1" - Bundle type:"!bundle1" <b>Corresponds with</b> Field instance:"!field2" on Entity type:"!entity2" Bundle type:"!bundle2"',
     array('!entity1' => $key[0], '!bundle1' => $key[1], '!field1' => $key[2], '!entity2' => $key[3], '!bundle2' => $key[4], '!field2' => $key[5]));
@@ -64,45 +64,45 @@ function corresponding_entity_references_format_label($key) {
 /**
  * Implements hook_entity_insert().
  */
-function corresponding_entity_references_entity_insert($entity, $type) {
-  corresponding_entity_references_processing_entity('insert', $entity, $type);
+function cer_entity_insert($entity, $type) {
+  cer_processing_entity('insert', $entity, $type);
 }
 
 /**
  * Implements hook_entity_update().
  */
-function corresponding_entity_references_entity_update($entity, $type) {
-  corresponding_entity_references_processing_entity('update', $entity, $type);
+function cer_entity_update($entity, $type) {
+  cer_processing_entity('update', $entity, $type);
 }
 
 /**
  * Implements hook_entity_delete().
  */
-function corresponding_entity_references_entity_delete($entity, $type) {
-  corresponding_entity_references_processing_entity('delete', $entity, $type);
+function cer_entity_delete($entity, $type) {
+  cer_processing_entity('delete', $entity, $type);
 }
 
 /**
  * Load enabled CNR presets.
  */
-function corresponding_entity_references_preset_load_enabled() {
+function cer_preset_load_enabled() {
   ctools_include('export');
-  return ctools_export_load_object('corresponding_entity_references', 'conditions', array('enabled' => 1));
+  return ctools_export_load_object('cer', 'conditions', array('enabled' => 1));
 }
 
 /**
  * Return CNR preset by key.
  */
-function corresponding_entity_references_preset_load($key) {
+function cer_preset_load($key) {
   ctools_include('export');
-  return ctools_export_crud_load('corresponding_entity_references', $key);
+  return ctools_export_crud_load('cer', $key);
 }
 
 /**
  * Return 1 if CNR preset specified by given key is enabled.
  */
-function corresponding_entity_references_preset_enabled($key) {
-  $preset = corresponding_entity_references_preset_load($key);
+function cer_preset_enabled($key) {
+  $preset = cer_preset_load($key);
   return empty($preset) ? 0 : $preset->enabled;
 }
 
@@ -114,16 +114,16 @@ function corresponding_entity_references_preset_enabled($key) {
  * @param $process_unchanged whether or not to process entity reference fields
  *        whose values have not changed.
  */
-function corresponding_entity_references_processing_entity($op, $entity, $type, $process_unchanged = FALSE) { 
-  module_load_include('inc', 'corresponding_entity_references', 'corresponding_entity_references.crud');
+function cer_processing_entity($op, $entity, $type, $process_unchanged = FALSE) { 
+  module_load_include('inc', 'cer', 'cer.crud');
 
-  $result = corresponding_entity_references_preset_load_enabled();
+  $result = cer_preset_load_enabled();
 
   while ($row = array_shift($result)) {
     $key = explode('*', $row->entity_types_content_fields);
     if(($type == $key[0]) || ($type == $key[3])){
 	
-      $entity->home = _corresponding_entity_references_entity_get_bundle($entity, $type);
+      $entity->home = _cer_entity_get_bundle($entity, $type);
 
       switch ($entity->home) {
         case $key[1]:
@@ -137,7 +137,7 @@ function corresponding_entity_references_processing_entity($op, $entity, $type, 
             'away_field' => $key[5],
           );
           $args = array($entity, $keys, $process_unchanged);
-          $function = 'corresponding_entity_references_' . $op;
+          $function = 'cer_' . $op;
           call_user_func_array($function, $args);
           if ($key[0] != $key[2]) {
             break;
@@ -154,7 +154,7 @@ function corresponding_entity_references_processing_entity($op, $entity, $type, 
             'away_field' => $key[2],
           );
           $args = array($entity, $keys, $process_unchanged);
-          $function = 'corresponding_entity_references_' . $op;
+          $function = 'cer_' . $op;
           call_user_func_array($function, $args);
           break;
       }
@@ -167,15 +167,15 @@ function corresponding_entity_references_processing_entity($op, $entity, $type, 
 /**
  * Submit a batch job to index the remaining, unindexed content.
  */
-function corresponding_entity_references_batch_index_remaining($types, $limit) {
+function cer_batch_index_remaining($types, $limit) {
   $batch = array(
     'operations' => array(
       array(
-        'corresponding_entity_references_batch_update_existing_entities',
+        'cer_batch_update_existing_entities',
         array($types, $limit)
       ),
     ),
-    'finished' => 'corresponding_entity_references_batch_update_existing_finished',
+    'finished' => 'cer_batch_update_existing_finished',
     'title' => t('Processing'),
     'init_message' => t('Preparing to update corresponding entity references for existing entities...'),
     'progress_message' => t('Processing entities...'),
@@ -187,9 +187,9 @@ function corresponding_entity_references_batch_index_remaining($types, $limit) {
 /**
  * Batch Operation Callback
  *
- * @see corresponding_entity_references_batch_index_remaining()
+ * @see cer_batch_index_remaining()
  */
-function corresponding_entity_references_batch_update_existing_entities($types, $limit, &$context) {
+function cer_batch_update_existing_entities($types, $limit, &$context) {
   // If we are on our first time through.
   if (!isset($context['sandbox']['progress'])) {
     $context['sandbox']['progress'] = 0;
@@ -205,7 +205,7 @@ function corresponding_entity_references_batch_update_existing_entities($types, 
 
   while ($row = $result->fetchObject()) {
     $entity = entity_load($row->nid);
-    corresponding_entity_references_processing_entity('update', $entity, $type, TRUE);
+    cer_processing_entity('update', $entity, $type, TRUE);
 
     // Update our progress information.
     $context['sandbox']['progress']++;
@@ -228,9 +228,9 @@ function corresponding_entity_references_batch_update_existing_entities($types, 
 /**
  * Batch 'finished' callback.
  *
- * @see corresponding_entity_references_batch_index_remaining()
+ * @see cer_batch_index_remaining()
  */
-function corresponding_entity_references_batch_update_existing_finished($success, $results, $operations) {
+function cer_batch_update_existing_finished($success, $results, $operations) {
   if ($success) {
     $type = 'status';
     $message = format_plural($results['count'], '1 entity processed successfully.', '@count entitys processed successfully.');
@@ -245,8 +245,8 @@ function corresponding_entity_references_batch_update_existing_finished($success
   drupal_set_message($message, $type);
 }
 
-function corresponding_entity_references_ctools_plugin_api($owner, $api) {
-  if ($owner == 'corresponding_entity_references' && $api == 'default_corresponding_entity_references_presets') {
+function cer_ctools_plugin_api($owner, $api) {
+  if ($owner == 'cer' && $api == 'default_cer_presets') {
     return array('version' => 1);
   }
 }

@@ -8,8 +8,8 @@
 /**
  * Implements hook_schema().
  */
-function corresponding_entity_references_schema() {
-  $schema['corresponding_entity_references'] = array(
+function cer_schema() {
+  $schema['cer'] = array(
     'description' => t('Saves the content types and entity reference fields for which the corresponding entity reference is enabled'),
     'fields' => array(
       'entity_types_content_fields' => array('type' => 'varchar', 'length' => 200, 'not null' => TRUE, 'default' => ''),
@@ -22,12 +22,21 @@ function corresponding_entity_references_schema() {
       'key name' => 'Corresponding entity reference',
       'identifier' => 'cnr_obj',
       'api' => array(
-        'api' => 'default_corresponding_entity_references_presets',
-        'owner' => 'corresponding_entity_references',
+        'api' => 'default_cer_presets',
+        'owner' => 'cer',
         'minimum_version' => 1,
         'current_version' => 1,
       ),
     ),
   );
   return $schema;
+}
+
+/**
+ * Implements hook_update().
+ * 
+ * Rename table to shorten module name.
+ */
+function cer_update_7001() {
+  db_rename_table('corresponding_entity_reference', 'cer');
 }
