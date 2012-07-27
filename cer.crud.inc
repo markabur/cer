@@ -42,8 +42,8 @@ function cer_insert($home_entity, $keys) {
               // Add the new reference.
               // If there are no other references, we need to make sure this
               // is delta 0
-              if (array_key_exists($referenced_entity->language, $referenced_entity->{$keys['away_field']}) == FALSE || $referenced_entity->{$keys['away_field']}[$referenced_entity->language][0]['target_id'] == NULL) {
-                $referenced_entity->{$keys['away_field']}[$referenced_entity->language][0]['target_id'] = $home_entity->$ids['home'];
+              if (array_key_exists(LANGUAGE_NONE, $referenced_entity->{$keys['away_field']}) == FALSE || $referenced_entity->{$keys['away_field']}[LANGUAGE_NONE][0]['target_id'] == NULL) {
+                $referenced_entity->{$keys['away_field']}[LANGUAGE_NONE][0]['target_id'] = $home_entity->$ids['home'];
 
               }
               else {
@@ -51,7 +51,7 @@ function cer_insert($home_entity, $keys) {
                 // Check for doubles, could happen when nodes of same type are
                 // referenced.
                 $exists = FALSE;
-                foreach ($referenced_entity->{$keys['away_field']}[$referenced_entity->language] as $key => $value) {
+                foreach ($referenced_entity->{$keys['away_field']}[LANGUAGE_NONE] as $key => $value) {
                   if ($value['target_id'] == $home_entity->$ids['home']) {
                     $exists = TRUE;
                     break;
@@ -59,7 +59,7 @@ function cer_insert($home_entity, $keys) {
                 }
 
                 if (!$exists) {
-                  $referenced_entity->{$keys['away_field']}[$referenced_entity->language][] = array('target_id' => $home_entity->$ids['home']);
+                  $referenced_entity->{$keys['away_field']}[LANGUAGE_NONE][] = array('target_id' => $home_entity->$ids['home']);
                 }
               }
               _cer_update($keys['away_entity_type'], $referenced_entity);
@@ -139,12 +139,12 @@ function cer_update($home_entity, $keys, $process_unchanged = FALSE) {
             // Self-references are handled by the node_reference module anyway.
             $referenced_entity->bundle_type = _cer_entity_get_bundle($referenced_entity, $keys['away_entity_type']);
             if ($referenced_entity->bundle_type == $keys['away_bundle'] && $id != $home_entity->$ids['home']) {
-              if (isset($referenced_entity->{$keys['away_field']}[$referenced_entity->language]) && is_array($referenced_entity->{$keys['away_field']}[$referenced_entity->language])) {
+              if (isset($referenced_entity->{$keys['away_field']}[LANGUAGE_NONE]) && is_array($referenced_entity->{$keys['away_field']}[LANGUAGE_NONE])) {
                 // Iterate through the away node's references.
-                foreach ($referenced_entity->{$keys['away_field']}[$referenced_entity->language] as $key => $value){
+                foreach ($referenced_entity->{$keys['away_field']}[LANGUAGE_NONE] as $key => $value){
                   // Remove references to the deleted node.
                   if ($value['target_id'] && $value['target_id'] == $home_entity->$ids['home']) {
-                    unset($referenced_entity->{$keys['away_field']}[$referenced_entity->language][$key]);
+                    unset($referenced_entity->{$keys['away_field']}[LANGUAGE_NONE][$key]);
                     _cer_update($keys['away_entity_type'], $referenced_entity);
                     break;
                   }
@@ -170,8 +170,8 @@ function cer_update($home_entity, $keys, $process_unchanged = FALSE) {
           // Detect whether the reference already exists.
           $exists = FALSE;
                   
-          if (isset($referenced_entity->{$keys['away_field']}[$referenced_entity->language]) && !empty($referenced_entity->{$keys['away_field']}[$referenced_entity->language])) {
-            foreach ($referenced_entity->{$keys['away_field']}[$referenced_entity->language] as $data) {
+          if (isset($referenced_entity->{$keys['away_field']}[LANGUAGE_NONE]) && !empty($referenced_entity->{$keys['away_field']}[LANGUAGE_NONE])) {
+            foreach ($referenced_entity->{$keys['away_field']}[LANGUAGE_NONE] as $data) {
               if ($data['target_id'] == $home_entity->$ids['home']) {
                 $exists = TRUE;
                 break;
@@ -183,14 +183,14 @@ function cer_update($home_entity, $keys, $process_unchanged = FALSE) {
           // Yes this means the deltas change on the away node when a
           // reference is made on the home node.
           $values = array();
-          if (isset($referenced_entity->{$keys['away_field']}[$referenced_entity->language])) {
-            foreach ($referenced_entity->{$keys['away_field']}[$referenced_entity->language] as $value) {
+          if (isset($referenced_entity->{$keys['away_field']}[LANGUAGE_NONE])) {
+            foreach ($referenced_entity->{$keys['away_field']}[LANGUAGE_NONE] as $value) {
               if (!empty($value['target_id'])) {
                 $values[] = $value;
               }
             }
           }
-          $referenced_entity->{$keys['away_field']}[$referenced_entity->language] = $values;
+          $referenced_entity->{$keys['away_field']}[LANGUAGE_NONE] = $values;
           // Add the new reference. Don't create a duplicate.
           if (!$exists) {
             // Get the allowed values.
@@ -205,9 +205,9 @@ function cer_update($home_entity, $keys, $process_unchanged = FALSE) {
                 $allowed_references = $field['cardinality'];
               }
               // Check for reference overloading.
-              $references = count($referenced_entity->{$keys['away_field']}[$referenced_entity->language]) + 1;
+              $references = count($referenced_entity->{$keys['away_field']}[LANGUAGE_NONE]) + 1;
               if (($allowed_references >= $references) || $unlimited) {
-                $referenced_entity->{$keys['away_field']}[$referenced_entity->language][] = array('target_id' => $home_entity->$ids['home']);
+                $referenced_entity->{$keys['away_field']}[LANGUAGE_NONE][] = array('target_id' => $home_entity->$ids['home']);
                 _cer_update($keys['away_entity_type'], $referenced_entity);
               }
               else {
