@@ -16,9 +16,11 @@ function cer_settings_form() {
     if(empty($data['settings']['handler_settings']['target_bundles'])){
       	$references[$row->field_name][] = $data['settings']['target_type'];
     }
-    foreach ($data['settings']['handler_settings']['target_bundles'] as $reference) {
-      if ($reference != '0') {
-        $references[$row->field_name][] = $reference;
+    if(isset($data['settings']['handler_settings']['target_bundles'])){
+      foreach ($data['settings']['handler_settings']['target_bundles'] as $reference) {
+        if ($reference != '0') {
+          $references[$row->field_name][] = $reference;
+        }
       }
     }
   }

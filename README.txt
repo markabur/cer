@@ -24,6 +24,11 @@ entity reference to entity type A. When you create entity X of type A and
 reference it to entity Y of type B entity Y will also receive an update in its
 entity reference field pointing to entity X.
 
+Known Issues
+
+Corresponding Entity References only works with the simple mode of selecting
+entities. Using a view to select which entities are able to be referenced
+breaks things and causes errors.
 
 Install
 
