@@ -114,7 +114,7 @@ function cer_preset_enabled($key) {
  * @param $process_unchanged whether or not to process entity reference fields
  *        whose values have not changed.
  */
-function cer_processing_entity($op, $entity, $type, $process_unchanged = FALSE) { 
+function cer_processing_entity($op, $entity, $type, $process_unchanged = FALSE) {
   module_load_include('inc', 'cer', 'cer.crud');
 
   $result = cer_preset_load_enabled();
@@ -122,7 +122,7 @@ function cer_processing_entity($op, $entity, $type, $process_unchanged = FALSE) 
   while ($row = array_shift($result)) {
     $key = explode('*', $row->entity_types_content_fields);
     if(($type == $key[0]) || ($type == $key[3])){
-	
+
       $entity->home = _cer_entity_get_bundle($entity, $type);
 
       switch ($entity->home) {
@@ -130,7 +130,7 @@ function cer_processing_entity($op, $entity, $type, $process_unchanged = FALSE) 
           // Create an array to pass to op function instead of 6 arguments.
           $keys = array(
             'home_entity_type' => $key[0],
-            'home_bundle' => $key[1], 
+            'home_bundle' => $key[1],
             'home_field' => $key[2],
             'away_entity_type' => $key[3],
             'away_bundle' => $key[4],
@@ -147,7 +147,7 @@ function cer_processing_entity($op, $entity, $type, $process_unchanged = FALSE) 
         case $key[4]:
           $keys = array(
             'home_entity_type' => $key[3],
-            'home_bundle' => $key[4], 
+            'home_bundle' => $key[4],
             'home_field' => $key[5],
             'away_entity_type' => $key[0],
             'away_bundle' => $key[1],
@@ -167,12 +167,11 @@ function cer_processing_entity($op, $entity, $type, $process_unchanged = FALSE) 
 /**
  * Submit a batch job to index the remaining, unindexed content.
  */
-function cer_batch_index_remaining($types, $limit) {
+function cer_batch_index_remaining($type, $limit) {
   $batch = array(
     'operations' => array(
       array(
-        'cer_batch_update_existing_entities',
-        array($types, $limit)
+        'cer_batch_update_existing_entities', array($type, $limit)
       ),
     ),
     'finished' => 'cer_batch_update_existing_finished',
@@ -189,30 +188,61 @@ function cer_batch_index_remaining($types, $limit) {
  *
  * @see cer_batch_index_remaining()
  */
-function cer_batch_update_existing_entities($types, $limit, &$context) {
+function cer_batch_update_existing_entities($type, $limit, &$context) {
   // If we are on our first time through.
   if (!isset($context['sandbox']['progress'])) {
     $context['sandbox']['progress'] = 0;
     $context['sandbox']['current_entity'] = 0;
-    $context['sandbox']['max'] = db_query("SELECT COUNT(DISTINCT nid) FROM {node} WHERE type IN (:types)", array(':types' => $types))->fetchField();
+    $count = 0;
+
+
+    $query = new EntityFieldQuery();
+    $query->entityCondition('entity_type', $type)
+          ->entityCondition('entity_id', 0, '>')
+          ->addMetaData('account', user_load(1)); // Run the query as user 1.
+
+    $result = $query->execute();
+    if (isset($result[$type])) {
+      $ids = array_keys($result[$type]);
+      $count += count($ids);
+    }
+    $context['sandbox']['max'] = $count;
   }
 
-  $nids = array();
-  $args = $types;
+  $ids = array();
+  $args = $type;
   $args['current_entity'] = $context['sandbox']['current_entity'];
-  // Get entity IDs to update.
-  $result = db_query_range("SELECT nid FROM {node} WHERE type IN (:types) AND nid > :args ORDER BY nid", 0, $limit, array(':types' => $types, ':args' => $args['current_entity']));
 
-  while ($row = $result->fetchObject()) {
-    $entity = entity_load($row->nid);
-    cer_processing_entity('update', $entity, $type, TRUE);
+  $labels = _cer_entity_ids();
+  $label = $labels[$type];
 
-    // Update our progress information.
-    $context['sandbox']['progress']++;
-    $context['sandbox']['current_entity'] = $entity->nid;
-    $context['message'] = t('Processed @current of @total entitys', array('@current' => $context['sandbox']['progress'], '@total' => $context['sandbox']['max']));
+  $query = new EntityFieldQuery();
+  $query->entityCondition('entity_type', $type)
+        ->entityCondition('entity_id', $args['current_entity'], '>')
+        ->propertyOrderBy($label, 'ASC')
+        ->range(0, $limit)
+        ->addMetaData('account', user_load(1)); // Run the query as user 1.
+
+  $result = $query->execute();
+  if (isset($result[$type])) {
+    $ids = array_keys($result[$type]);
   }
 
+  foreach ($ids as $id){
+      $entity = entity_load($type, array($id));
+      $entity = $entity[$id];
+      cer_processing_entity('update', $entity, $type, TRUE);
+      // Update our progress information.
+      $context['sandbox']['progress']++;
+      $context['sandbox']['current_entity'] = $entity->{$label};
+      $context['message'] = t('Processed @current of @total entities',
+                               array(
+                                 '@current' => $context['sandbox']['progress'],
+                                 '@total' => $context['sandbox']['max'],
+                               )
+                             );
+
+  }
   // Inform the batch engine that we are not finished,
   // and provide an estimation of the completion level we reached.
   if ($context['sandbox']['progress'] != $context['sandbox']['max']) {
@@ -248,5 +278,57 @@ function cer_batch_update_existing_finished($success, $results, $operations) {
 function cer_ctools_plugin_api($owner, $api) {
   if ($owner == 'cer' && $api == 'default_cer_presets') {
     return array('version' => 1);
+  }
+}
+
+/**
+ * Helper function. Returns entity "ID" keys.
+ *
+ * @param $entity_types Array containing "home" and "away" keys.
+ */
+function _cer_entity_ids($entity_types = NULL) {
+  $types = entity_get_info();
+  foreach($types as $key => $type){
+    $entity_type_ids[$key] = $type['entity keys']['id'];
+  }
+  if (isset($entity_types)){
+    $ids = array(
+      'home' => $entity_type_ids[$entity_types['home']],
+      'away' => $entity_type_ids[$entity_types['away']],
+    );
+    return $ids;
+  }
+  else {
+    return $entity_type_ids;
+  }
+}
+
+
+
+/**
+ * Helper function. Returns entity "bundle" keys.
+ *
+ * @param $entity_types Array containing "home" and "away" keys.
+ */
+function _cer_entity_bundles($entity_types) {
+  $types = entity_get_info();
+
+  foreach($types as $key => $type){
+    $entity_type_id[$key] = $type['entity keys']['bundle'];
+  }
+
+  $bundles = array(
+    'home' => $entity_type_id[$entity_types['home']],
+    'away' => $entity_type_id[$entity_types['away']],
+  );
+  return $bundles;
+}
+
+function _cer_entity_get_bundle($entity, $entity_type) {
+  $info = entity_get_info($entity_type);
+  if (empty($info['entity keys']['bundle'])) {
+    return $entity_type;
+  } else {
+    return $entity->{$info['entity keys']['bundle']};
   }
 }

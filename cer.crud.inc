@@ -96,12 +96,16 @@ function cer_update($home_entity, $keys, $process_unchanged = FALSE) {
   $ids = _cer_entity_ids($types);
 
   // Since home_entity is just being saved, $old_entity and $home_entity are different!
-  $old_entity = $home_entity->original;
-
+  if ($process_unchanged == FALSE){
+    $old_entity = $home_entity->original;
+  }
+  else{
+    $old_entity = $home_entity;
+  }
   //$old_entity = $old_entity[$home_entity->$ids['home']];
   $old = $new = array();
 
-  // Determine the nodereference values before the update.
+  // Determine the entityreference values before the update.
   if (isset($old_entity->$keys['home_field']) && is_array($old_entity->$keys['home_field'])) {
     foreach ($old_entity->$keys['home_field'] as $lang => $fields) {
       foreach ($fields as $reference) {
@@ -123,7 +127,7 @@ function cer_update($home_entity, $keys, $process_unchanged = FALSE) {
     }
   }
 
-  if ($old == $new){
+  if (($old == $new) && $process_unchanged == FALSE){
     return;
   }
 
@@ -286,50 +290,4 @@ function _cer_update($entity_type, $entity) {
   field_attach_update($entity_type, $entity);
 }
 
-/**
- * Helper function. Returns entity "ID" keys.
- *
- * @param $entity_types Array containing "home" and "away" keys.
- */
-function _cer_entity_ids($entity_types) {
-  $types = entity_get_info();
-  foreach($types as $key => $type){
-    $entity_type_id[$key] = $type['entity keys']['id'];
-  }
 
-  $ids = array(
-    'home' => $entity_type_id[$entity_types['home']],
-    'away' => $entity_type_id[$entity_types['away']],
-  );
-  return $ids;
-}
-
-
-
-/**
- * Helper function. Returns entity "bundle" keys.
- *
- * @param $entity_types Array containing "home" and "away" keys.
- */
-function _cer_entity_bundles($entity_types) {
-  $types = entity_get_info();
-
-  foreach($types as $key => $type){
-    $entity_type_id[$key] = $type['entity keys']['bundle'];
-  }
-
-  $bundles = array(
-    'home' => $entity_type_id[$entity_types['home']],
-    'away' => $entity_type_id[$entity_types['away']],
-  );
-  return $bundles;
-}
-
-function _cer_entity_get_bundle($entity, $entity_type) {
-  $info = entity_get_info($entity_type);
-  if (empty($info['entity keys']['bundle'])) {
-    return $entity_type;
-  } else {
-    return $entity->{$info['entity keys']['bundle']};
-  }
-}

@@ -41,8 +41,8 @@ function cer_settings_form() {
     foreach ($fields_to_compare as $field) {
       foreach ($fields_to_compare as $second_field) {
         if ($field['bundle'] == $second_field['reference'] && $second_field['bundle'] == $field['reference']) {
-          if (!array_key_exists($field['entity'] . ' ' . $field['bundle'] . ' ' . $field['field_type'] . ' ' . 
-                         $second_field['entity'] . ' ' . $second_field['bundle'] . ' ' . $second_field['field_type'], $corr_entityrefs) 
+          if (!array_key_exists($field['entity'] . ' ' . $field['bundle'] . ' ' . $field['field_type'] . ' ' .
+                         $second_field['entity'] . ' ' . $second_field['bundle'] . ' ' . $second_field['field_type'], $corr_entityrefs)
            && !array_key_exists($second_field['entity'] . ' ' . $second_field['bundle'] . ' ' . $second_field['field_type'] . ' ' . $field['entity'] . ' ' . $field['bundle'] . ' ' . $field['field_type'], $corr_entityrefs)) {
             $corr_entityrefs[$field['entity'] . ' ' . $field['bundle'] . ' ' . $field['field_type'] . ' ' .
                       $second_field['entity'] . ' ' . $second_field['bundle'] . ' ' . $second_field['field_type']] = array('entity_1' => $field['entity'], 'bundle_1' => $field['bundle'], 'field_1' => $field['field_type'], 'entity_2' => $second_field['entity'], 'bundle_2' => $second_field['bundle'], 'field_2' => $second_field['field_type']);
@@ -144,11 +144,11 @@ function cer_update_form() {
     $options[$type] = $class['label'];
   }
 
-  $form['types'] = array(
-    '#type' => 'checkboxes',
+  $form['type'] = array(
+    '#type' => 'select',
     '#title' => t('Entity types'),
     '#options' => $options,
-    '#description' => t('Select the entity types that you want to update.'),
+    '#description' => t('Select the entity type that you want to update.'),
   );
 
 
@@ -189,9 +189,9 @@ function cer_update_form() {
  * Allows updating of current entitys.
  */
 function cer_update_form_validate($form, &$form_state) {
-  $types = array_filter($form_state['values']['types']);
-  if (empty($types)) {
-    form_set_error('types', t('You must select at least one entity type.'));
+  $type = $form_state['values']['type'];
+  if (empty($type)) {
+    form_set_error('type', t('You must select an entity type.'));
   }
 }
 
@@ -200,7 +200,6 @@ function cer_update_form_validate($form, &$form_state) {
  * Allows updating of current entitys.
  */
 function cer_update_form_submit($form, &$form_state) {
-  $types = array_filter($form_state['values']['types']);
-  $types = array_keys($types);
-  cer_batch_index_remaining($types, $form_state['values']['limit']);
+  $type = $form_state['values']['type'];
+  cer_batch_index_remaining($type, $form_state['values']['limit']);
 }
