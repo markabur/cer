@@ -1,0 +1,80 @@
+diff --git a/cer.crud.inc b/cer.crud.inc
+index 8b7d2a6..444a1c1 100644
+--- a/cer.crud.inc
++++ b/cer.crud.inc
+@@ -10,7 +10,7 @@
+  *
+  * $keys = array(
+  *  'home_entity_type' => $key[0],
+- *  'home_bundle' => $key[1], 
++ *  'home_bundle' => $key[1],
+  *  'home_field' => $key[2],
+  *  'away_entity_type' => $key[3],
+  *  'away_bundle' => $key[4],
+@@ -38,7 +38,7 @@ function cer_insert($home_entity, $keys) {
+             $referenced_entity = $referenced_entity[$reference['target_id']];
+             $referenced_entity->bundle_type = _cer_entity_get_bundle($referenced_entity, $keys['away_entity_type']);
+             if ($referenced_entity->bundle_type == $keys['away_bundle']) {
+-            
++
+               // Add the new reference.
+               // If there are no other references, we need to make sure this
+               // is delta 0
+@@ -80,7 +80,7 @@ function cer_insert($home_entity, $keys) {
+  *
+  * $keys = array(
+  *  'home_entity_type' => $key[0],
+- *  'home_bundle' => $key[1], 
++ *  'home_bundle' => $key[1],
+  *  'home_field' => $key[2],
+  *  'away_entity_type' => $key[3],
+  *  'away_bundle' => $key[4],
+@@ -132,13 +132,11 @@ function cer_update($home_entity, $keys, $process_unchanged = FALSE) {
+     foreach ($old as $data) {
+       if ($removed = array_diff($old, $new)) {
+         foreach ($removed as $id) {
+-
+           // Load the referenced node if it is of the specified away type.
+           if ($referenced_entity = entity_load($keys['away_entity_type'], array($id), NULL, FALSE)) {
+-	    $referenced_entity = $referenced_entity[$id];
+-            // Self-references are handled by the node_reference module anyway.
++            $referenced_entity = $referenced_entity[$id];
+             $referenced_entity->bundle_type = _cer_entity_get_bundle($referenced_entity, $keys['away_entity_type']);
+-            if ($referenced_entity->bundle_type == $keys['away_bundle'] && $id != $home_entity->$ids['home']) {
++            if ($referenced_entity->bundle_type == $keys['away_bundle']) {
+               if (isset($referenced_entity->{$keys['away_field']}[LANGUAGE_NONE]) && is_array($referenced_entity->{$keys['away_field']}[LANGUAGE_NONE])) {
+                 // Iterate through the away node's references.
+                 foreach ($referenced_entity->{$keys['away_field']}[LANGUAGE_NONE] as $key => $value){
+@@ -156,20 +154,18 @@ function cer_update($home_entity, $keys, $process_unchanged = FALSE) {
+       }
+     }
+   }
++
+   // Handle added references.
+   // No array diff a reference overload could of happend or a mass update.
+   if ($added = $new) {
+     foreach ($added as $id) {
+       // Load the referenced entity if it is of the specified away type.
+       if ($referenced_entity = entity_load($keys['away_entity_type'], array($id), NULL, FALSE)) {
+-	$referenced_entity = $referenced_entity[$id];
+-        // Self-references are handled by the node_reference module anyway.
+-
++        $referenced_entity = $referenced_entity[$id];
+         $referenced_entity->bundle_type = _cer_entity_get_bundle($referenced_entity, $keys['away_entity_type']);
+-        if ($referenced_entity->bundle_type == $keys['away_bundle'] && $id != $home_entity->$ids['home']) {
++        if ($referenced_entity->bundle_type == $keys['away_bundle']) {
+           // Detect whether the reference already exists.
+           $exists = FALSE;
+-                  
+           if (isset($referenced_entity->{$keys['away_field']}[LANGUAGE_NONE]) && !empty($referenced_entity->{$keys['away_field']}[LANGUAGE_NONE])) {
+             foreach ($referenced_entity->{$keys['away_field']}[LANGUAGE_NONE] as $data) {
+               if ($data['target_id'] == $home_entity->$ids['home']) {
+@@ -240,7 +236,7 @@ function cer_update($home_entity, $keys, $process_unchanged = FALSE) {
+  *
+  * $keys = array(
+  *  'home_entity_type' => $key[0],
+- *  'home_bundle' => $key[1], 
++ *  'home_bundle' => $key[1],
+  *  'home_field' => $key[2],
+  *  'away_entity_type' => $key[3],
+  *  'away_bundle' => $key[4],
