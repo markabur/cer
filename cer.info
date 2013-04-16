@@ -1,6 +1,7 @@
 name = Corresponding Entity References
 description = Syncs the Entity reference between two node types which have an entityreference to each other.  
 core = 7.x
+package = Fields
 dependencies[] = entityreference
 dependencies[] = ctools
 
