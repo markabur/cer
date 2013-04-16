@@ -147,7 +147,9 @@ function cer_processing_entity($op, $entity, $type, $process_unchanged = FALSE) 
           $args = array($entity, $keys, $process_unchanged);
           $function = 'cer_' . $op;
           call_user_func_array($function, $args);
-          if ($key[0] != $key[2]) {
+          // Only continue on to check the reverse direction of this preset if
+          // the home & away bundles & entity types are the same.
+          if ($key[0] != $key[3] || $key[1] != $key[4]) {
             break;
           }
 
