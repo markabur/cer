@@ -20,7 +20,7 @@ function cer_menu() {
     'type' => MENU_NORMAL_ITEM,
   );
   $items['admin/config/system/cer/references'] = array(
-    'title' => 'Corresponding entity references',
+    'title' => 'References',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('cer_settings_form'),
     'access arguments' => array('administer cer settings'),
@@ -46,9 +46,26 @@ function cer_permission() {
   return array(
     'administer cer settings' => array(
       'title' => t('Administer corresponding entity reference settings'),
-      'description' => t('Administer corresponding entity reference settings'),
     )
   );
+}
+
+/**
+ * Implements hook_help().
+ */
+function cer_help($path, $arg) {
+  $output = '';
+  if ($path == 'admin/config/system/cer') {
+    $output .= t('Check which entity references should listen to each other. When checking a check box a reference on entity type A to entity B will automatically update the entity reference field on entity B adding an entry which points to entity A.');
+  }
+  elseif ($path == 'admin/config/system/cer/update') {
+    $output .= t('This will update all the existing entities for the selected content types so that their entity reference fields are in sync.');
+    $output .= '<br />';
+    $output .= t('This process may take a long time depending on the number of entities you are updating.');
+    $output .= '<br /><br />';
+    $output .= t('When the process is finished you will see a count of the number of entities that were updated.');
+  }
+  return $output;
 }
 
 /**
@@ -64,8 +81,24 @@ function cer_theme() {
 
 function theme_cer_label($variables) {
   $key = explode(' ', $variables['key']);
-  return t('Field instance:"!field1" on Entity type:"!entity1" - Bundle type:"!bundle1" <b>Corresponds with</b> Field instance:"!field2" on Entity type:"!entity2" Bundle type:"!bundle2"',
-    array('!entity1' => $key[0], '!bundle1' => $key[1], '!field1' => $key[2], '!entity2' => $key[3], '!bundle2' => $key[4], '!field2' => $key[5]));
+  
+  $local = field_info_instance($key[0], $key[2], $key[1]);
+  $remote = field_info_instance($key[3], $key[5], $key[4]);
+
+  $message = 'Correspond <span title="!local_field">%local_label</span> on !local_entity(s) of type %local_bundle with <span title="!remote_field">%remote_label</span> on !remote_entity(s) of type %remote_bundle.';
+
+  $variables = array(
+    '%local_label' => $local['label'],
+    '!local_field' => $local['field_name'],
+    '!local_entity' => $local['entity_type'],
+    '%local_bundle' => $local['bundle'],
+    '%remote_label' => $remote['label'],
+    '!remote_field' => $remote['field_name'],
+    '!remote_entity' => $remote['entity_type'],
+    '%remote_bundle' => $remote['bundle'],
+  );
+
+  return t($message, $variables);
 }
 
 /**
@@ -119,26 +152,28 @@ function cer_preset_enabled($key) {
  * @param $op the operation being performed on the entity.
  * @param $entity the entity object
  */
-function cer_processing_entity($op, $entity, $type) {
+function cer_processing_entity($op, $entity, $entity_type) {
+  // If the entity is of the wrong type, entity_extract_IDs() will throw
+  // EntityMalformedException and rightfully bail out here.
+  list (, , $bundle) = entity_extract_IDs($entity_type, $entity);
+
   $result = cer_preset_load_enabled();
 
-  while ($row = array_shift($result)) {
+  foreach ($result as $row) {
     $keys = explode('*', $row->entity_types_content_fields);
-    
-    if ($keys[0] == $type) {  
+
+    if ($keys[0] == $entity_type && $keys[1] == $bundle) {
       $handler = new CerHandler($row->entity_types_content_fields, $entity);
       call_user_func(array($handler, $op));
     }
-   
-    if ($keys[3] == $type) {
+
+    if ($keys[3] == $entity_type && $keys[4] == $bundle) {
       $preset = implode('*', array($keys[3], $keys[4], $keys[5], $keys[0], $keys[1], $keys[2]));
       $handler = new CerHandler($preset, $entity);
       call_user_func(array($handler, $op));
     }
   }
 }
-
-
 
 /**
  * Submit a batch job to index the remaining, unindexed content.
@@ -251,6 +286,9 @@ function cer_batch_update_existing_finished($success, $results, $operations) {
   drupal_set_message($message, $type);
 }
 
+/**
+ * Implements hook_ctools_plugin_api().
+ */
 function cer_ctools_plugin_api($owner, $api) {
   if ($owner == 'cer' && $api == 'default_cer_presets') {
     return array('version' => 1);
