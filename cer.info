@@ -5,5 +5,5 @@ package = Fields
 dependencies[] = entityreference
 dependencies[] = ctools
 
-files[] = cer.admin.inc
-files[] = cer.crud.inc
+files[] = handler.inc
+files[] = tests/crud.test

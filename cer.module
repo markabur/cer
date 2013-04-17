@@ -10,6 +10,7 @@
  */
 function cer_menu() {
   $items = array();
+
   $items['admin/config/system/cer'] = array(
     'title' => 'Corresponding entity references',
     'page callback' => 'drupal_get_form',
@@ -18,7 +19,6 @@ function cer_menu() {
     'file' => 'cer.admin.inc',
     'type' => MENU_NORMAL_ITEM,
   );
-
   $items['admin/config/system/cer/references'] = array(
     'title' => 'Corresponding entity references',
     'page callback' => 'drupal_get_form',
@@ -27,7 +27,6 @@ function cer_menu() {
     'file' => 'cer.admin.inc',
     'type' => MENU_DEFAULT_LOCAL_TASK,
   );
-
   $items['admin/config/system/cer/update'] = array(
     'title' => 'Update existing entities',
     'page callback' => 'drupal_get_form',
@@ -119,55 +118,22 @@ function cer_preset_enabled($key) {
  *
  * @param $op the operation being performed on the entity.
  * @param $entity the entity object
- * @param $process_unchanged whether or not to process entity reference fields
- *        whose values have not changed.
  */
-function cer_processing_entity($op, $entity, $type, $process_unchanged = FALSE) {
-  module_load_include('inc', 'cer', 'cer.crud');
-
+function cer_processing_entity($op, $entity, $type) {
   $result = cer_preset_load_enabled();
 
   while ($row = array_shift($result)) {
-    $key = explode('*', $row->entity_types_content_fields);
-    if(($type == $key[0]) || ($type == $key[3])){
-
-      $entity->home = _cer_entity_get_bundle($entity, $type);
-
-      switch ($entity->home) {
-        case $key[1]:
-          // Create an array to pass to op function instead of 6 arguments.
-          $keys = array(
-            'home_entity_type' => $key[0],
-            'home_bundle' => $key[1],
-            'home_field' => $key[2],
-            'away_entity_type' => $key[3],
-            'away_bundle' => $key[4],
-            'away_field' => $key[5],
-          );
-          $args = array($entity, $keys, $process_unchanged);
-          $function = 'cer_' . $op;
-          call_user_func_array($function, $args);
-          // Only continue on to check the reverse direction of this preset if
-          // the home & away bundles & entity types are the same.
-          if ($key[0] != $key[3] || $key[1] != $key[4]) {
-            break;
-          }
-
-        // Fall through.
-        case $key[4]:
-          $keys = array(
-            'home_entity_type' => $key[3],
-            'home_bundle' => $key[4],
-            'home_field' => $key[5],
-            'away_entity_type' => $key[0],
-            'away_bundle' => $key[1],
-            'away_field' => $key[2],
-          );
-          $args = array($entity, $keys, $process_unchanged);
-          $function = 'cer_' . $op;
-          call_user_func_array($function, $args);
-          break;
-      }
+    $keys = explode('*', $row->entity_types_content_fields);
+    
+    if ($keys[0] == $type) {  
+      $handler = new CerHandler($row->entity_types_content_fields, $entity);
+      call_user_func(array($handler, $op));
+    }
+   
+    if ($keys[3] == $type) {
+      $preset = implode('*', array($keys[3], $keys[4], $keys[5], $keys[0], $keys[1], $keys[2]));
+      $handler = new CerHandler($preset, $entity);
+      call_user_func(array($handler, $op));
     }
   }
 }
@@ -313,32 +279,12 @@ function _cer_entity_ids($entity_types = NULL) {
   }
 }
 
-
-
 /**
- * Helper function. Returns entity "bundle" keys.
+ * Update field data.
  *
- * @param $entity_types Array containing "home" and "away" keys.
+ * @param $node the referenced node to be updated.
  */
-function _cer_entity_bundles($entity_types) {
-  $types = entity_get_info();
-
-  foreach($types as $key => $type){
-    $entity_type_id[$key] = $type['entity keys']['bundle'];
-  }
-
-  $bundles = array(
-    'home' => $entity_type_id[$entity_types['home']],
-    'away' => $entity_type_id[$entity_types['away']],
-  );
-  return $bundles;
-}
-
-function _cer_entity_get_bundle($entity, $entity_type) {
-  $info = entity_get_info($entity_type);
-  if (empty($info['entity keys']['bundle'])) {
-    return $entity_type;
-  } else {
-    return $entity->{$info['entity keys']['bundle']};
-  }
+function _cer_update($entity_type, $entity) {
+  field_attach_presave($entity_type, $entity);
+  field_attach_update($entity_type, $entity);
 }
