@@ -1,29 +1,31 @@
 <?php
+
 /**
  * @file
- * Admin functionality, separated for performance purposes.
+ * Administrative functionality, separated for performance purposes.
  */
 
 /**
  * The settings form.
  */
 function cer_settings_form($form = array(), &$form_state) {
-  $corr_entityrefs = array();
+  $channels = array();
+
   foreach (_cer_get_fields() as $field) {
     foreach ($field['bundles'] as $entity_type => $bundles) {
       foreach ($bundles as $bundle) {
         $instance = field_info_instance($entity_type, $field['field_name'], $bundle);
-        $corr_entityrefs = array_merge($corr_entityrefs, _cer_find_channels($instance));
+        $channels = array_merge($channels, _cer_find_channels($instance));
        }
      }
    }
 
-  if (empty($corr_entityrefs)) {
+  if (empty($channels)) {
     drupal_set_message(t('There are no entity reference fields that can correspond.'), 'warning');
   }
   else {
     $mapping = array();
-    foreach ($corr_entityrefs as $count => $key) {
+    foreach ($channels as $count => $key) {
       $formatted_key = str_replace(' ', '*', $key);
 
       $mapping[$count] = $formatted_key;
@@ -75,15 +77,18 @@ function cer_settings_form_submit($form, $form_state) {
   foreach ($query_values as $key => $value) {
     // get preset object (create new one if it doesn't exist already).
     $preset = empty($presets[$key]) ? ctools_export_crud_new('cer') : $presets[$key];
-    // set and save value
 
+    // set and save value
     if (empty($preset->entity_types_content_fields)) {
       $preset->entity_types_content_fields = $key;
     }
     $preset->enabled = $value;
     ctools_export_crud_save('cer', $preset);
+
     // remove from list of presets, so we know which ones are still used
-    if (isset($presets[$key])) unset($presets[$key]);
+    if (isset($presets[$key])) {
+      unset($presets[$key]);
+    }
   }
 
   drupal_set_message(t('The configuration has been saved.'));
@@ -117,7 +122,19 @@ function cer_update_form($form = array(), &$form_state) {
  * Allows updating of current entitys.
  */
 function cer_update_form_submit($form, &$form_state) {
-  cer_batch_index_remaining($form_state['values']['type'], $form_state['values']['limit']);
+  $batch = array(
+    'finished' => 'cer_batch_update_existing_finished',
+    'title' => t('Processing'),
+    'init_message' => t('Preparing to update corresponding entity references for existing entities...'),
+    'progress_message' => t('Processing entities...'),
+    'error_message' => t('Corresponding entity references - existing entity update has encountered an error.'),
+  );
+
+  $entities = entity_load($form_state['values']['type'], FALSE);
+  foreach ($entities as $entity) {
+    $batch['operations'][] = array('cer_processing_entity', array('update', $entity, $form_state['values']['type']));
+  }
+  batch_set($batch);
 }
 
 /**

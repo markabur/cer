@@ -1,8 +1,8 @@
 <?php
+
 /**
  * @file
- * Module file providing the "corresponding entity reference" module main
- * functions.
+ * Main module file.
  */
 
 /**
@@ -149,10 +149,20 @@ function cer_preset_enabled($key) {
 /**
  * Process a entity's corresponding entity references.
  *
- * @param $op the operation being performed on the entity.
- * @param $entity the entity object
+ * @param string $op 
+ *  The operation being performed on the entity (insert, update, or delete).
+ *
+ * @param object $entity
+ *  The entity.
+ *
+ * @param string $entity_type
+ *  The entity type.
+ *
+ * @param array $context
+ *  Either the Batch API context (since this is the callback function used
+ *  during bulk update) or NULL if we're not in a batch job.
  */
-function cer_processing_entity($op, $entity, $entity_type) {
+function cer_processing_entity($op, $entity, $entity_type, &$context = NULL) {
   // If the entity is of the wrong type, entity_extract_IDs() will throw
   // EntityMalformedException and rightfully bail out here.
   list (, , $bundle) = entity_extract_IDs($entity_type, $entity);
@@ -163,127 +173,67 @@ function cer_processing_entity($op, $entity, $entity_type) {
     $keys = explode('*', $row->entity_types_content_fields);
 
     if ($keys[0] == $entity_type && $keys[1] == $bundle) {
-      $handler = new CerHandler($row->entity_types_content_fields, $entity);
-      call_user_func(array($handler, $op));
+      try {
+        $handler = new CerHandler($row->entity_types_content_fields, $entity);
+        call_user_func(array($handler, $op));
+      }
+      catch (CerException $e) {
+        if (isset($context)) {
+          $context['results']['errors'][] = $e;
+        }
+        else {
+          throw $e;
+        }
+      }
     }
 
     if ($keys[3] == $entity_type && $keys[4] == $bundle) {
       $preset = implode('*', array($keys[3], $keys[4], $keys[5], $keys[0], $keys[1], $keys[2]));
-      $handler = new CerHandler($preset, $entity);
-      call_user_func(array($handler, $op));
+
+      try {
+        $handler = new CerHandler($preset, $entity);
+        call_user_func(array($handler, $op));
+      }
+      catch (CerException $e) {
+        if (isset($context)) {
+          $context['results']['errors'][] = $e;
+        }
+        else {
+          throw $e;
+        }
+      }
     }
   }
-}
 
-/**
- * Submit a batch job to index the remaining, unindexed content.
- */
-function cer_batch_index_remaining($type, $limit) {
-  $batch = array(
-    'operations' => array(
-      array(
-        'cer_batch_update_existing_entities', array($type, $limit)
-      ),
-    ),
-    'finished' => 'cer_batch_update_existing_finished',
-    'title' => t('Processing'),
-    'init_message' => t('Preparing to update corresponding entity references for existing entities...'),
-    'progress_message' => t('Processing entities...'),
-    'error_message' => t('Corresponding entity references - existing entity update has encountered an error.'),
-  );
-  batch_set($batch);
-}
-
-/**
- * Batch Operation Callback
- *
- * @see cer_batch_index_remaining()
- */
-function cer_batch_update_existing_entities($type, $limit, &$context) {
-  // If we are on our first time through.
-  if (!isset($context['sandbox']['progress'])) {
-    $context['sandbox']['progress'] = 0;
-    $context['sandbox']['current_entity'] = 0;
-    $count = 0;
-
-
-    $query = new EntityFieldQuery();
-    $query->entityCondition('entity_type', $type)
-          ->entityCondition('entity_id', 0, '>')
-          ->addMetaData('account', user_load(1)); // Run the query as user 1.
-
-    $result = $query->execute();
-    if (isset($result[$type])) {
-      $ids = array_keys($result[$type]);
-      $count += count($ids);
-    }
-    $context['sandbox']['max'] = $count;
-  }
-
-  $ids = array();
-  $args = $type;
-  $args['current_entity'] = $context['sandbox']['current_entity'];
-
-  $labels = _cer_entity_ids();
-  $label = $labels[$type];
-
-  $query = new EntityFieldQuery();
-  $query->entityCondition('entity_type', $type)
-        ->entityCondition('entity_id', $args['current_entity'], '>')
-        ->propertyOrderBy($label, 'ASC')
-        ->range(0, $limit)
-        ->addMetaData('account', user_load(1)); // Run the query as user 1.
-
-  $result = $query->execute();
-  if (isset($result[$type])) {
-    $ids = array_keys($result[$type]);
-  }
-
-  foreach ($ids as $id){
-      $entity = entity_load($type, array($id));
-      $entity = $entity[$id];
-      cer_processing_entity('update', $entity, $type, TRUE);
-      // Update our progress information.
-      $context['sandbox']['progress']++;
-      $context['sandbox']['current_entity'] = $entity->{$label};
-      $context['message'] = t('Processed @current of @total entities',
-                               array(
-                                 '@current' => $context['sandbox']['progress'],
-                                 '@total' => $context['sandbox']['max'],
-                               )
-                             );
-
-  }
-  // Inform the batch engine that we are not finished,
-  // and provide an estimation of the completion level we reached.
-  if ($context['sandbox']['progress'] != $context['sandbox']['max']) {
-    $context['finished'] = $context['sandbox']['progress'] / $context['sandbox']['max'];
-  }
-  // Put the total into the results section when we're finished so we can show
-  // it to the admin.
-  if ($context['finished']) {
-    $context['results']['count'] = $context['sandbox']['progress'];
+  if (isset($context)) {
+    $context['results']['count']++;
   }
 }
 
 /**
  * Batch 'finished' callback.
- *
- * @see cer_batch_index_remaining()
  */
 function cer_batch_update_existing_finished($success, $results, $operations) {
   if ($success) {
-    $type = 'status';
-    $message = format_plural($results['count'], '1 entity processed successfully.', '@count entitys processed successfully.');
+    $message = format_plural($results['count'], '1 entity processed.', '@count entities processed.');
+
+    if (isset($results['errors'])) {
+      $type = 'warning';
+      foreach ($results['errors'] as $e) {
+        drupal_set_message($e->getMessage(), 'error');
+      }
+    }
+    else {
+      $type = 'status';
+    }
+    drupal_set_message($message, $type);
   }
   else {
-    $type = 'error';
-    // An error occurred.
-    // $operations contains the operations that remained unprocessed.
+    // An error occurred. $operations contains the operations that remained unprocessed.
     $error_operation = reset($operations);
     $message = 'An error occurred while processing ' . $error_operation[0] . ' with arguments:' . print_r($error_operation[0], TRUE);
+    drupal_set_message($message, 'error');
   }
-  drupal_set_message($message, $type);
 }
 
 /**
@@ -292,28 +242,6 @@ function cer_batch_update_existing_finished($success, $results, $operations) {
 function cer_ctools_plugin_api($owner, $api) {
   if ($owner == 'cer' && $api == 'default_cer_presets') {
     return array('version' => 1);
-  }
-}
-
-/**
- * Helper function. Returns entity "ID" keys.
- *
- * @param $entity_types Array containing "home" and "away" keys.
- */
-function _cer_entity_ids($entity_types = NULL) {
-  $types = entity_get_info();
-  foreach($types as $key => $type){
-    $entity_type_ids[$key] = $type['entity keys']['id'];
-  }
-  if (isset($entity_types)){
-    $ids = array(
-      'home' => $entity_type_ids[$entity_types['home']],
-      'away' => $entity_type_ids[$entity_types['away']],
-    );
-    return $ids;
-  }
-  else {
-    return $entity_type_ids;
   }
 }
 
