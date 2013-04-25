@@ -69,6 +69,32 @@ function cer_help($path, $arg) {
 }
 
 /**
+ * Implements hook_field_delete_instance().
+ */
+function cer_field_delete_instance($instance) {
+  foreach (cer_preset_load_enabled() as $row) {
+    $keys = explode('*', $row->entity_types_content_fields);
+
+    if (($keys[0] == $instance['entity_type'] && $keys[1] == $instance['bundle'] && $keys[2] == $instance['field_name']) || ($keys[3] == $instance['entity_type'] && $keys[4] == $instance['bundle'] && $keys[5] == $instance['field_name'])) {
+      cer_preset_delete($row->entity_types_content_fields);
+    }
+  }
+}
+
+/**
+ * Implements hook_field_delete_field().
+ */
+function cer_field_delete_field($field) {
+  foreach (cer_preset_load_enabled() as $row) {
+    $keys = explode('*', $row->entity_types_content_fields);
+
+    if ($keys[2] == $field['field_name'] || $keys[5] == $field['field_name']) {
+      cer_preset_delete($row->entity_types_content_fields);
+    }
+  }
+}
+
+/**
  * Implements hook_theme().
  */
 function cer_theme() {
@@ -123,7 +149,7 @@ function cer_entity_delete($entity, $type) {
 }
 
 /**
- * Load enabled CNR presets.
+ * Load enabled CER presets.
  */
 function cer_preset_load_enabled() {
   ctools_include('export');
@@ -131,7 +157,7 @@ function cer_preset_load_enabled() {
 }
 
 /**
- * Return CNR preset by key.
+ * Return CER preset by key.
  */
 function cer_preset_load($key) {
   ctools_include('export');
@@ -139,11 +165,23 @@ function cer_preset_load($key) {
 }
 
 /**
- * Return 1 if CNR preset specified by given key is enabled.
+ * Return 1 if CER preset specified by given key is enabled.
  */
 function cer_preset_enabled($key) {
   $preset = cer_preset_load($key);
   return empty($preset) ? 0 : $preset->enabled;
+}
+
+/**
+ * Deletes or disables a given CER preset.
+ */
+function cer_preset_delete($key) {
+  ctools_include('export');
+
+  ctools_export_crud_delete('cer', $key);
+  ctools_export_crud_disable('cer', $key);
+
+  ctools_export_load_object_reset('cer');
 }
 
 /**

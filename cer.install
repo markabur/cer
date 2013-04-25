@@ -18,6 +18,7 @@ function cer_schema() {
     'primary key' => array('entity_types_content_fields'),
     'export' => array(
       'key' => 'entity_types_content_fields',
+      'status' => 'enabled',
       'primary key' => 'entity_types_content_fields',
       'key name' => 'Corresponding entity reference',
       'identifier' => 'cnr_obj',
