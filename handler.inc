@@ -10,26 +10,6 @@
  * Exception related to CER operations.
  */
 class CerException extends Exception {
-
-  /**
-   * @constructor
-   *
-   * @param string $message
-   *  The untranslated error message.
-   *
-   * @param array $variables
-   *  Variables to pass into t().
-   *
-   * @param int code
-   *  The error code, if any.
-   *
-   * @param Exception $previous
-   *  The previous exception, if any.
-   */
-  public function __construct($message, $variables = array(), $code = 0, Exception $previous = NULL) {
-    parent::__construct(t($message, $variables), $code, $previous);
-  }
-
 }
 
 interface CerHandlerInterface {
@@ -134,7 +114,7 @@ abstract class CerHandlerBase {
     $keys = explode('*', $preset);
 
     if (sizeof($keys) != 6) {
-      throw new CerException('Invalid configuration: @preset', array('@preset' => $preset));
+      throw new CerException(t('Invalid configuration: @preset', array('@preset' => $preset)));
     }
 
     $this->local = field_info_instance($keys[0], $keys[2], $keys[1]);
@@ -142,7 +122,7 @@ abstract class CerHandlerBase {
       $this->local['field'] = field_info_field($keys[2]);
     }
     else {
-      throw new CerException('Local field instance does not exist.');
+      throw new CerException(t('Local field instance does not exist.'));
     }
 
     $this->remote = field_info_instance($keys[3], $keys[5], $keys[4]);
@@ -150,7 +130,7 @@ abstract class CerHandlerBase {
       $this->remote['field'] = field_info_field($keys[5]);
     }
     else {
-      throw new CerException('Remote field instance does not exist.');
+      throw new CerException(t('Remote field instance does not exist.'));
     }
   }
 
@@ -283,7 +263,7 @@ class CerHandler extends CerHandlerBase implements CerHandlerInterface {
       }
     }
     else {
-      throw new CerException('Cannot create invalid reference to remote entity.');
+      throw new CerException(t('Cannot create invalid reference to remote entity.'));
     }
   }
 
@@ -324,10 +304,10 @@ class CerHandler extends CerHandlerBase implements CerHandlerInterface {
    */ 
   protected function addReferenceFrom($entity) {
     if ($this->referencedBy($entity)) {
-      throw new CerException('Cannot create duplicate reference from remote entity.');
+      throw new CerException(t('Cannot create duplicate reference from remote entity.'));
     }
     elseif ($this->filled($this->getRemoteReferenceIDs($entity), $this->remote['field'])) {
-      throw new CerException('Remote field cannot support any more references.');
+      throw new CerException(t('Remote field cannot support any more references.'));
     }
     else {
       $languages = field_available_languages($this->remote['entity_type'], $this->remote['field']);
@@ -349,10 +329,10 @@ class CerHandler extends CerHandlerBase implements CerHandlerInterface {
     $id = $this->getRemoteEntityID($entity);
 
     if ($this->references($entity)) {
-      throw new CerException('Cannot create duplicate reference to remote entity.');
+      throw new CerException(t('Cannot create duplicate reference to remote entity.'));
     }
     elseif ($this->filled($this->getLocalReferenceIDs(), $this->local['field'])) {
-      throw new CerException('Local field cannot support any more references.');
+      throw new CerException(t('Local field cannot support any more references.'));
     }
     else {
       $languages = field_available_languages($this->local['entity_type'], $this->local['field']);
