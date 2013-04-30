@@ -6,5 +6,3 @@ dependencies[] = entityreference
 dependencies[] = ctools
 
 files[] = handler.inc
-files[] = tests/crud.test
-files[] = tests/fields.test
