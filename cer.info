@@ -6,3 +6,5 @@ dependencies[] = entityreference
 dependencies[] = ctools
 
 files[] = handler.inc
+
+configure = admin/config/system/cer
