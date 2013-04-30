@@ -24,6 +24,13 @@ entity reference field pointing to entity X.
 
 KNOWN ISSUES
 
+- Support for entity reference fields in field collections is still a work in progress.
+  CER has no native support for entities that are wrapped by other entities (i.e.,
+  field collections), and implementing this properly will require extensive changes
+  to many parts of CER. For this reason, field collection support is on hold until
+  a few other major issues in the queue are sorted out. The thread for field collection
+  support is http://drupal.org/node/1729666.
+
 - Support for multi-language entities is, at the time of this writing, flaky at best.
   There is a patch to implement better multi-language support, available at
   http://drupal.org/node/1961026. If this patch works well for you, PLEASE post
