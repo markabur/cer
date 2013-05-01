@@ -293,7 +293,8 @@ function _cer_update($entity_type, $entity) {
 
   field_attach_presave($entity_type, $entity);
   field_attach_update($entity_type, $entity);
-  
-  $id = array_shift(entity_extract_IDs($entity_type, $entity));
+
+  $extract_ids = entity_extract_IDs($entity_type, $entity);
+  $id = array_shift($extract_ids);
   entity_get_controller($entity_type)->resetCache(array($id));
 }

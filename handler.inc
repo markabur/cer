@@ -160,7 +160,8 @@ class CerHandler extends CerHandlerBase implements CerHandlerInterface {
 
     // If $entity is of the wrong type, entity_extract_IDs()
     // will throw EntityMalformedException here.
-    $this->id = array_shift(entity_extract_IDs($this->local['entity_type'], $entity));
+    $extract_ids = entity_extract_IDs($this->local['entity_type'], $entity);
+    $this->id = array_shift($extract_ids);
 
     $this->entity = $entity;
   }
@@ -353,7 +354,8 @@ class CerHandler extends CerHandlerBase implements CerHandlerInterface {
    *  The remote entity ID.
    */
   protected function getRemoteEntityID($entity) {
-    return array_shift(entity_extract_IDs($this->remote['entity_type'], $entity));
+    $extract_ids = entity_extract_IDs($this->remote['entity_type'], $entity);
+    return array_shift($extract_ids);
   }
 
   /**
