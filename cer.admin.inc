@@ -33,7 +33,7 @@ function cer_settings_form($form = array(), &$form_state) {
       $form['values']["enabled_{$count}"] = array(
         '#type' => 'checkbox',
         '#default_value' => cer_preset_enabled($formatted_key),
-        '#title' => theme('cer_label', array('key' => $key)),
+        '#title' => filter_xss(theme('cer_label', array('key' => $key))),
       );
     }
 
