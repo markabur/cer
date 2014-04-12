@@ -12,6 +12,12 @@ function cer_settings_form($form = array(), &$form_state) {
   $channels = array();
 
   foreach (_cer_get_fields() as $field) {
+    // A field that hasn't been instantiated yet will not have a 'bundles' key, which
+    // means it's useless to us, so skip over it.
+    if (! isset($field['bundles'])) {
+      continue;
+    }
+
     foreach ($field['bundles'] as $entity_type => $bundles) {
       foreach ($bundles as $bundle) {
         $instance = field_info_instance($entity_type, $field['field_name'], $bundle);
