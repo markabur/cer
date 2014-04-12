@@ -15,7 +15,9 @@ function cer_settings_form($form = array(), &$form_state) {
     foreach ($field['bundles'] as $entity_type => $bundles) {
       foreach ($bundles as $bundle) {
         $instance = field_info_instance($entity_type, $field['field_name'], $bundle);
-        $channels = array_merge($channels, _cer_find_channels($instance));
+        if ($instance) {
+          $channels = array_merge($channels, _cer_find_channels($instance));
+        }
        }
      }
    }
