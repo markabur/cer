@@ -229,12 +229,19 @@ function _cer_get_target_bundles($field) {
   // method of finding a field's target bundles.
   //
   if ($field['settings']['handler'] == 'views') {
-    $view = views_get_view($field['settings']['handler_settings']['view']['view_name']);
-    $view->set_display($field['settings']['handler_settings']['view']['display_name']);
+    $view_name = $field['settings']['handler_settings']['view']['view_name'];
 
-    $info = entity_get_info($field['settings']['target_type']);
-    if ($info['entity keys']['bundle'] && $handler = $view->display_handler->get_handler('filter', $info['entity keys']['bundle'])) {
-      $target_bundles = $handler->value;
+    $view = views_get_view($view_name);
+    if ($view) {
+      $view->set_display($field['settings']['handler_settings']['view']['display_name']);
+
+      $info = entity_get_info($field['settings']['target_type']);
+      if ($info['entity keys']['bundle'] && $handler = $view->display_handler->get_handler('filter', $info['entity keys']['bundle'])) {
+        $target_bundles = $handler->value;
+      }
+    }
+    else {
+      drupal_set_message(t('Could not get target bundles for %field (failed to load view %view).', array('%view' => $view_name, '%field' => $field['field_name'])), 'error');
     }
   }
   elseif (isset($field['settings']['handler_settings']['target_bundles'])) {
