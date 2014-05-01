@@ -49,8 +49,8 @@ function cer_update_7002() {
   foreach ($presets as $preset) {
     $keys = explode('*', $preset);
     
-    $left = field_info_instance($keys[0], $keys[1], $keys[2]);
-    $right = field_info_instance($keys[3], $keys[4], $keys[5]);
+    $left = field_info_instance($keys[0], $keys[2], $keys[1]);
+    $right = field_info_instance($keys[3], $keys[5], $keys[4]);
 
     if (empty($left) || empty($right)) {
       db_query('UPDATE {cer} SET enabled = 0 WHERE entity_types_content_fields = :preset', array(':preset' => $preset));
